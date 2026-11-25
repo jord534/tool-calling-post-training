@@ -27,6 +27,7 @@ The example format is as follows. Please make sure the parameter type is correct
 
 #### PARSING
 def parse_json_field(value):
+    # inside the train dataset:
     # xlam stores tools and answers as json strings: turn them into python lists
     if isinstance(value, str):
         try:
