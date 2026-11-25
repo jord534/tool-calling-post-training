@@ -43,7 +43,7 @@ def convert_to_xlam_tool(tools):
     if "properties" not in params:
         return tool  # already xlam format
 
-    return {
+    return { # open AI or BFCL format case
         "name": tool["name"],
         "description": tool.get("description", ""),
         "parameters": {k: v for k, v in params["properties"].items()},
@@ -65,11 +65,9 @@ def build_prompt(task_instruction: str, format_instruction: str, tools: list, qu
 def build_messages(tools: list, query: str, system_message: str | None = None) -> list[dict]:
     # the chat to feed apply_chat_template: the whole prompt goes in one user message, as on the xlam card
     # system_message=None lets the template insert its default system prompt (deepseek: "computer science only")
-    # a custom system message must end with "\n": the deepseek template glues it to "### Instruction:"
-    if "PASTE" in TASK_INSTRUCTION or "PASTE" in FORMAT_INSTRUCTION:
-        raise ValueError("Paste TASK_INSTRUCTION and FORMAT_INSTRUCTION from the xLAM-1b-fc-r model card first")
+    # a custom system message must end with "\n" then the deepseek template glues it to "### Instruction:"
     if not isinstance(query, str) or not query:
-        raise ValueError(f"Expected a non-empty query string, got {query!r}")
+        raise ValueError(f"Expected a non-empty query str, got {query!r}")
 
     content = build_prompt(TASK_INSTRUCTION, FORMAT_INSTRUCTION, parse_json_field(tools), query)
     messages = [{"role": "user", "content": content}]
@@ -93,17 +91,3 @@ def format_answer(calls) -> str:
             raise ValueError(f"Expected each call as {{'name': ..., 'arguments': ...}}, got {call!r}")
         clean.append({"name": call["name"], "arguments": call["arguments"]})  # name first, always
     return json.dumps({"tool_calls": clean})
-####
-
-
-#### QUICK CHECK
-if __name__ == "__main__":
-    # one xlam-style row (flat tools) and one bfcl-style row (properties): both should show the "city" argument
-    xlam_tools = '[{"name": "get_weather", "description": "Current weather in a city", "parameters": {"city": {"type": "str", "description": "City name"}}}]'
-    bfcl_tools = [{"name": "get_weather", "description": "Current weather in a city",
-                   "parameters": {"type": "dict", "properties": {"city": {"type": "string", "description": "City name"}}, "required": ["city"]}}]
-    print(json.dumps(convert_to_xlam_tool(parse_json_field(xlam_tools))))
-    print(json.dumps(convert_to_xlam_tool(bfcl_tools)))
-    print(format_answer('[{"name": "get_weather", "arguments": {"city": "Lyon"}}]'))
-    print(format_answer([]))
-####
