@@ -38,7 +38,7 @@ def load_pinned_dataset(data_config_path: str):
     train, test, val = make_splits(dataset, test_size, val_size, seed)
 
     config_hash = compute_config_hash(data_config)
-    data_dirname = f"{set_name.split("/")[-1]}_{config_hash}"
+    data_dirname = f"{set_name.split('/')[-1]}_{config_hash}"
     split_dir = cache_root / data_dirname
 
     save_splits(split_dir, train = train, test = test, val = val)
@@ -105,3 +105,10 @@ def write_dataset_manifest(
 def compute_config_hash(data_config, length: int = 8) -> str:
     dump = json.dumps(data_config, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(dump).hexdigest()[:length]
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv)!=2:
+        raise RuntimeError("Requires 1 argument as path to the data config yaml. Usage is:\n uv run scripts/prepare_xlam.py path/to/config.yaml")
+    config_path = sys.argv[1]
+    load_pinned_dataset(config_path)
