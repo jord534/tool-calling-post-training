@@ -1,4 +1,5 @@
 import json
+from collections import defaultdict
 
 def parse_answer(text: str):
     # returns the list of calls, [] for "no tool fits", or None if the answer isn't valid
@@ -28,3 +29,39 @@ def parse_answer(text: str):
             # print(f"Missing name or argument in the tool {tool}.")
             return None
     return calls
+
+
+
+def standardize(call: dict) -> str:
+    # one call as text with sorted keys: equal calls give equal strings
+    return json.dumps({"name": call["name"], "arguments": call["arguments"]}, sort_keys=True)
+
+
+def score_calls(predicted: str, reference: list, tools: list) -> dict:
+    # predicted: the raw text the model wrote
+    # reference: the correct calls, parsed (list of {"name", "arguments"})
+    # tools: the tools offered, parsed, in xlam format (name -> parameters dict)
+    calls = parse_answer(predicted)
+    if calls is None:
+        # not a valid answer: nothing else can be judged
+        return {"parse_ok": False, "invalid_call": None, "name_match": False, "exact_match": False}
+
+    # invalid = a tool that wasn't offered, or an argument the tool doesn't have
+    params_per_tool = {tool["name"]: set(tool["parameters"].keys()) for tool in tools}
+    invalid_call = False
+    for call in calls:
+        if call["name"] not in params_per_tool:
+            invalid_call = True
+        elif not set(call["arguments"]) <= params_per_tool[call["name"]]:
+            invalid_call = True
+
+    # order of calls doesn't matter, how many times each one appears does
+    name_match = sorted(c["name"] for c in calls) == sorted(c["name"] for c in reference)
+    exact_match = sorted(standardize(c) for c in calls) == sorted(standardize(c) for c in reference)
+
+    return {
+        "parse_ok": True,
+        "invalid_call": invalid_call,
+        "name_match": name_match,
+        "exact_match": exact_match,
+    }
