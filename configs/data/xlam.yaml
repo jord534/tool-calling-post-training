@@ -4,7 +4,7 @@ dataset:
   split: train
 
 tokenizer:
-  id: Salesforce/xlam-function-calling-60k
+  id: deepseek-ai/deepseek-coder-1.3b-instruct
   revision: this_rev
 
 system_prompt: \n
