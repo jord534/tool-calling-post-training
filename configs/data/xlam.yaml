@@ -7,7 +7,7 @@ tokenizer:
   id: deepseek-ai/deepseek-coder-1.3b-instruct
   revision: this_rev
 
-system_prompt: \n
+system_prompt: "\n"
 
 max_seq_len: 2048
 
