@@ -53,13 +53,13 @@ def load_pinned_dataset(data_config_path: str):
     split_dir = cache_root / data_dirname
 
     splits = {"train": train, "test": test, "val": val}
+
+    for name, split in splits.items():
+        split.save_to_disk(split_dir / "raw" / name)   # the original query / tools / answers
+        
     stats = tokenize_and_save_splits(splits, split_dir, tokenizer, system_message, max_seq_len)
 
     write_dataset_manifest(split_dir, config_hash, data_config, splits, stats)
-
-
-
-
 
     return None
 
