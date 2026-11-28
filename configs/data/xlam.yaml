@@ -5,7 +5,7 @@ dataset:
 
 tokenizer:
   id: deepseek-ai/deepseek-coder-1.3b-instruct
-  revision: this_rev
+  revision: e063262dac8366fc1f28a4da0ff3c50ea66259ca
 
 system_prompt: "\n"
 
