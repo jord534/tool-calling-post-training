@@ -1,3 +1,6 @@
+import os
+import shutil
+import tempfile
 import yaml
 from pathlib import Path
 from datasets import load_dataset, Dataset
@@ -52,13 +55,29 @@ def load_pinned_dataset(data_config_path: str):
     data_dirname = f"{set_name.split('/')[-1]}_{config_hash}"
     split_dir = cache_root / data_dirname
 
+    # a complete cache (it has a manifest) is never rebuilt
+    if (split_dir / "manifest.json").exists():
+        print(f"Cache already exists: {split_dir}")
+        return split_dir
+    if split_dir.exists():
+        raise RuntimeError(f"{split_dir} exists but has no manifest (a half-built cache from an older run): delete it and run again")
+
     splits = {"train": train, "test": test, "val": val}
 
-    stats = tokenize_and_save_splits(splits, split_dir, tokenizer, system_message, max_seq_len)
+    # build everything in a temporary folder next to the final one, then rename it in one step:
+    # a crash never leaves a half-built cache under the real name
+    cache_root.mkdir(parents=True, exist_ok=True)
+    tmp_dir = Path(tempfile.mkdtemp(dir=cache_root, prefix=f".{data_dirname}.tmp-"))
+    try:
+        stats = tokenize_and_save_splits(splits, tmp_dir, tokenizer, system_message, max_seq_len)
+        write_dataset_manifest(tmp_dir, data_dirname, config_hash, data_config, splits, stats)
+        os.replace(tmp_dir, split_dir)
+    except BaseException:
+        shutil.rmtree(tmp_dir, ignore_errors=True)  # clean up, then show the original error
+        raise
 
-    write_dataset_manifest(split_dir, config_hash, data_config, splits, stats)
-
-    return None
+    print(f"Cache written to {split_dir}")
+    return split_dir
 
 def shuffle_and_pick(data, seed, sample_size):
     if sample_size > len(data):
@@ -80,13 +99,14 @@ def make_splits(dataset: Dataset, test_size, val_size, seed):
 
 def write_dataset_manifest(
     output_dir: Path,
+    cache_name: str,
     config_hash: str,
     data_config: dict,
     splits: dict[str, Dataset],
     stats: dict,
 ) -> Path:
     manifest = {
-        "cache_dir": output_dir.name,
+        "cache_dir": cache_name,  # the final folder name, not the temporary one
         "config_hash": config_hash,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "seed": data_config["seed"],
@@ -116,8 +136,8 @@ def tokenize_row(row, tokenizer, system_message):
     answer = format_answer(row["answers"])
     full_chat = messages + [{"role": "assistant", "content": answer}]
 
-    prompt_tokens = tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=True)
-    text_tokens = tokenizer.apply_chat_template(full_chat, tokenize=True)
+    prompt_tokens = tokenizer.apply_chat_template(messages, tokenize=True, add_generation_prompt=True)["input_ids"]
+    text_tokens = tokenizer.apply_chat_template(full_chat, tokenize=True)["input_ids"]
 
     # the masking below assumes the prompt is the start of the full chat
     if text_tokens[:len(prompt_tokens)] != prompt_tokens:
