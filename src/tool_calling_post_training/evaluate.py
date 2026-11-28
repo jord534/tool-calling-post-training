@@ -1,8 +1,6 @@
 import json
+import re
 from collections import defaultdict
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from src.tool_calling_post_training.tools import build_messages
-import torch
 
 def parse_answer(text: str):
     # returns the list of calls, [] for "no tool fits", or None if the answer isn't valid
@@ -69,60 +67,7 @@ def score_calls(predicted: str, reference: list, tools: list) -> dict:
         "exact_match": exact_match,
     }
 
-def get_answers(model_name,
-                model_revision, 
-                data, 
-                source, 
-                device = torch.device("cpu"),
-                system_message = "\n",
-    ):
-    model = AutoModelForCausalLM.from_pretrained(model_name, revision = model_revision).to(device)
-    tokenizer = AutoTokenizer.from_pretrained(model_name, revision = model_revision)
 
-    for datum in data:
-        # build the input
-        query, tools = get_query_and_tools(datum, source)
-        messages = build_messages(tools, query, system_message)
-        inputs = tokenizer.apply_chat_template(
-            messages,
-            add_generation_prompt = True, 
-            return_tensors="pt", 
-            return_dict = True
-        ).to(model.device)
-
-        gen = model.generate(
-            **inputs,
-            do_sample = False, # greedy decoding for reproducibility
-            max_new_tokens = 256,
-        )
-
-        answer = tokenizer.decode(gen[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True) # gen has both the prompt and the answer
-
-        calls = parse_answer(answer)
-
-        score = get_score(calls, reference, tools, source)
-
-
-def get_score(calls, reference, tools, source):
-    if "xLAM" in source:
-        return score_calls(calls, reference, tools)
-    elif "BFCL" in source:
-        return score_bfcl()
-    else: # when2call
-        if calls is not None: # the answer parsed
-            if len(calls) >= 1: # at least one call
-                return True
-        return False
-
-def get_query_and_tools(datum, source):
-    if "xLAM" in source:
-        return datum["query"], datum["tools"]
-    elif "BFCL" in source:
-        return datum["question"], datum["function"]
-    return datum["question"], datum["tools"] # when2call
-
-
-import re
 
 
 #### BFCL SCORING

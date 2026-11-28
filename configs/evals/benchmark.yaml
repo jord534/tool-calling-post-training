@@ -1,0 +1,20 @@
+# scripts/fetch_benchmarks.py clones bfcl and when2call at these commits
+
+xlam_cache: artifacts/data/XXX # need to specify after preparing data
+
+bfcl:
+  repo: https://github.com/ShishirPatil/gorilla.git
+  commit: 6ea57973c7a6097fd7c5915698c54c17c5b1b6c8
+  dir: artifacts/benchmarks/gorilla
+  sparse_path: berkeley-function-call-leaderboard/bfcl_eval/data   # only this folder is downloaded
+  categories: [simple_python, multiple, parallel, parallel_multiple, irrelevance]
+
+when2call:
+  repo: https://github.com/NVIDIA/When2Call.git
+  commit: ecc8d42388e91ab37e7e737d48e16e8ecea3d1dc
+  dir: artifacts/benchmarks/When2Call
+  test_file: data/test/when2call_test_mcq.jsonl
+
+generation:
+  max_new_tokens: 256
+  batch_size: 16

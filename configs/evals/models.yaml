@@ -1,0 +1,16 @@
+# the models scripts/eval_model.py can evaluate, picked by name: --model b0
+# path: a hugging face id or a local export folder; revision: a commit hash, or null for a local folder
+
+models:
+  - name: b0
+    path: deepseek-ai/deepseek-coder-1.3b-instruct
+    revision: e063262dac8366fc1f28a4da0ff3c50ea66259ca
+
+  - name: ref
+    path: Salesforce/xLAM-1b-fc-r
+    revision: 20e8e2d0d15a9a26b179ec5bba0c51521a4664a4
+
+  # added after phase 3, one entry per exported checkpoint
+  # - name: sft_xlam_s0_epoch4
+  #   path: artifacts/export/sft_xlam_s0_epoch4
+  #   revision: null
